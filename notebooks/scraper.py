@@ -10,7 +10,6 @@ options = Options()
 options.headless = True
 
 # sacar o numero total de paginas
-
 url = 'https://www.era.pt/comprar?ob=1&tp=1,2&page=1&ord=3'
 driver = Chrome(options=options)
 driver.get(url)
@@ -70,5 +69,3 @@ for page in pbar:
 driver.quit()
 
 pd.DataFrame(dict_list).to_csv('../data/House_prices_23.csv')
-
-
