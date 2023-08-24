@@ -87,19 +87,25 @@ df["Lat"] = (
 
 df["City"] = df["Localization"].apply(lambda x: x.split(",")[-1].strip())
 
+df["Parking"] = (
+    df["Parking"]
+    .apply(lambda x: x.split("-")[1] if "-" in str(x) else x)
+    .astype("float64")
+)
+
+df["Wcs"] = (
+    df["Wcs"].apply(lambda x: x.split("-")[1] if "-" in str(x) else x).astype("float64")
+)
+
 
 df.columns
 df.head()
-df.info()
+
 
 feats = [
-    "BelongsToDevelopment",
-    "BusinessStatus",
-    "BusinessType",
     "Ce",
     "Elevator",
     "HasExactLocation",
-    "IsDevelopment",
     "Lat",
     "Lng",
     "ListingArea",
@@ -109,33 +115,11 @@ feats = [
     "PropertyType",
     "Rooms",
     "Wcs",
-    "ConstructionFeasibility",
     "City",
     "SellPrice",
 ]
 
 houses = df[feats].copy()
-
-
-# fig, ax = plt.subplots()
-# labels = df.groupby(["PropertyType"])["SellPrice"].size()[
-#     df.groupby(["PropertyType"])["SellPrice"].mean().sort_values().index
-# ]
-
-# bars = ax.bar(
-#     df.groupby(["PropertyType"])["SellPrice"].mean().sort_values().index,
-#     df.groupby(["PropertyType"])["SellPrice"].mean().sort_values(),
-# )
-# ax.bar_label(bars, fmt="{:.2E}", rotation=45, labels=labels)
-# ax.set_title("Property Type mean value and respective counts")
-# ax.set_xticklabels(
-#     rotation=90,
-#     labels=df.groupby(["PropertyType"])["SellPrice"].mean().sort_values().index,
-# )
-# ax.set_ylabel("Sell Price")
-# plt.show()
-
-houses.info()
 
 
 def convert_bool_to_int(df):
@@ -150,13 +134,70 @@ def convert_bool_to_int(df):
 
 houses = convert_bool_to_int(houses)
 
-houses[houses["Lat"].isna()][["Lat", "Lng"]].to_dict()
 
-houses["Lng"] = houses["Lng"].fillna(houses.groupby(["City"])["Lng"].median())
-houses["Lat"] = houses["Lat"].fillna(houses.groupby(["City"])["Lat"].median())
+## Imputar as features
 
-houses.groupby(["City"])["Lat"].median().to_dict()
+houses["Ce"] = houses["Ce"].fillna(houses["Ce"].mode().values[0])
+
+# Imputar a lat e lng com base nas medianas de cada cidade
+for col in ["Lat", "Lng"]:
+    dict_col = houses.groupby(["City"]).median(numeric_only=True)[[col]].to_dict()[col]
+    houses[col] = houses[col].fillna(houses["City"].map(dict_col))
+
+#  há 3 cidade que so aparecem uma vez e sem valores, portanto não temos mediana possivel vamos dropar
+
+houses.dropna(subset=["Lat", "Lng"], inplace=True)
+
+
+houses[houses["ListingArea"].isna() | houses["NetArea"].isna()][
+    ["ListingArea", "NetArea"]
+]
+
+# vou tentar ver a percentagem média de diferença entre a listing area e a net area
+
+(houses["NetArea"] / (houses["ListingArea"] + houses["NetArea"])).mean()
+
+# Percentagem de aproveitamento do terreno
+(houses["NetArea"] / (houses["ListingArea"] + houses["NetArea"])).plot.hist()
+plt.axvline(
+    (houses["NetArea"] / (houses["ListingArea"] + houses["NetArea"])).mean(),
+    linestyle="--",
+    c="red",
+    label="Mean",
+)
+plt.axvline(
+    (houses["NetArea"] / (houses["ListingArea"] + houses["NetArea"])).median(),
+    linestyle="--",
+    c="purple",
+    label="Median",
+)
+plt.legend()
+
+# -- ronda os 0.46 porcento portanto vamos imputar com base nisto
+# -- introduzi algum viés mas wtv
+
+houses[houses["ListingArea"].isna() | houses["NetArea"].isna()][
+    ["ListingArea", "NetArea"]
+]
+
+houses.loc[houses["NetArea"].isna(), "NetArea"] = houses["ListingArea"] * 0.46
+houses.loc[houses["ListingArea"].isna(), "ListingArea"] = houses["NetArea"] / 0.46
+
+houses.loc[houses["ListingArea"].isna()]
+
+houses["ListingArea"] = houses["ListingArea"].fillna(houses["ListingArea"].median())
+houses.loc[houses["NetArea"].isna(), "NetArea"] = houses["ListingArea"] * 0.46
+
+
+houses["Parking"] = houses["Parking"].fillna(houses["Parking"].median())
+
+houses["Rooms"].plot.hist()
+
+houses[houses["Rooms"].isna()]
+houses["Rooms"] = houses["Rooms"].fillna(houses["Rooms"].median())
+
+houses["Wcs"] = houses["Wcs"].fillna(houses["Wcs"].median())
+
+houses.to_pickle("../../data/interim/01_houses_processed.pkl")
 
 houses.info()
-
-houses.groupby(["City"])[["Lat", "Lng"]].median()
