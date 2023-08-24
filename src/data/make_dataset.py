@@ -200,4 +200,5 @@ houses["Wcs"] = houses["Wcs"].fillna(houses["Wcs"].median())
 
 houses.to_pickle("../../data/interim/01_houses_processed.pkl")
 
-houses.info()
+# to check on sandance
+houses.to_csv("../../data/interim/01_houses_processed.csv")
