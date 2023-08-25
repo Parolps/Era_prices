@@ -2,7 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-
+from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.cluster import KMeans
+from sklearn.metrics.pairwise import rbf_kernel
+import geopandas as gp
+import contextily as ctx
+from sklearn.preprocessing import MinMaxScaler
 
 plt.style.use("fivethirtyeight")
 plt.rcParams["figure.figsize"] = (12, 8)
@@ -173,4 +178,100 @@ plt.xlabel("Price")
 plt.ylabel("Cities")
 plt.savefig("../../reports/figures/Top20_Cities_Price_Boxplot.png", bbox_inches="tight")
 
-# pegar no df e trazer apenas as instâncias que estão neste indice
+# gráfico lat lng com cluster similarity
+# map portugal
+
+
+class ClusterSimilarity(BaseEstimator, TransformerMixin):
+    def __init__(self, n_clusters=10, gamma=1.0, random_state=None):
+        self.n_clusters = n_clusters
+        self.gamma = gamma
+        self.random_state = random_state
+
+    def fit(self, X, y=None, sample_weight=None):
+        self.kmeans_ = KMeans(self.n_clusters, random_state=self.random_state)
+        self.kmeans_.fit(X, sample_weight=sample_weight)
+        return self  # Retornar self sempre !!!
+
+    def transform(self, X):
+        return rbf_kernel(X, self.kmeans_.cluster_centers_, gamma=self.gamma)
+
+    def get_features_names_out(self, names=None):
+        return [f"Cluster {i} similarity" for i in range(self.n_clusters)]
+
+
+cluster_simil = ClusterSimilarity(n_clusters=10, gamma=1, random_state=42)
+similarities = cluster_simil.fit_transform(
+    df[["Lat", "Lng"]], sample_weight=df["SellPrice"]
+)
+
+df["Max cluster similarity"] = similarities.max(axis=1)
+
+
+continent = df.query("Lng >= -10 & Lng <= -6")
+cond_bool = np.where(
+    (cluster_simil.kmeans_.cluster_centers_[:, 1] >= -10)
+    & (cluster_simil.kmeans_.cluster_centers_[:, 1] <= -6)
+)
+continent_clusters = cluster_simil.kmeans_.cluster_centers_[cond_bool]
+
+ax = continent.plot(
+    kind="scatter",
+    x="Lng",
+    y="Lat",
+    grid=True,
+    #    label="Preço",
+    c="Max cluster similarity",
+    cmap="jet",
+    colorbar=True,
+    legend=True,
+    sharex=False,
+    figsize=(10, 7),
+)
+ax.plot(
+    continent_clusters[:, 1],
+    continent_clusters[:, 0],
+    linestyle="",
+    color="black",
+    marker="X",
+    markersize=8,
+    label="Cluster centers",
+)
+ctx.add_basemap(ax, crs="EPSG:4326", source=ctx.providers.OpenStreetMap.Mapnik)
+ax.axis([-10, -6, 36.8, 42.5])
+ax.legend(loc="upper right", fontsize="12")
+plt.savefig("../../reports/figures/Continent_map_clusters.png", bbox_inches="tight")
+
+
+# df.plot(
+#     kind="scatter",
+#     x="Lng",
+#     y="Lat",
+#     grid=True,
+#     label="Preço",
+#     c="Max cluster similarity",
+#     cmap="jet",
+#     colorbar=True,
+#     legend=True,
+#     sharex=False,
+#     figsize=(10, 7),
+# )
+# plt.plot(
+#     cluster_simil.kmeans_.cluster_centers_[:, 1],
+#     cluster_simil.kmeans_.cluster_centers_[:, 0],
+#     linestyle="",
+#     color="black",
+#     marker="X",
+#     markersize=20,
+#     label="Cluster centers",
+# )
+# plt.axis([-10, -5, 36, 43])
+
+# df["SellPrice"].plot.bar()
+# df.head()
+
+# MIN_MAX
+# X_std = (continent["SellPrice"] - continent["SellPrice"].min(axis=0)) / (
+#     continent["SellPrice"].max(axis=0) - continent["SellPrice"].min(axis=0)
+# )
+# sizes = X_std * (7 - 3) + 3
