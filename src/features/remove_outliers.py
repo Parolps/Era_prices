@@ -141,8 +141,6 @@ df[mask].corr()["SellPrice"].sort_values(ascending=False)
 
 df.plot(kind="scatter", x="Lng", y="Lat")
 
-df.query("Lng >= -5").shape
-
 city_median_coords = df.groupby(["City"]).median(numeric_only=True)[["Lng", "Lat"]]
 lng_dict = city_median_coords["Lng"].to_dict()
 lat_dict = city_median_coords["Lat"].to_dict()
@@ -160,9 +158,12 @@ px.scatter_mapbox(
 )
 
 
-df.loc[(df["Lng"] >= -25) & (df["Lng"] <= -20), "Lng"] = df.loc[df["Lng"] >= -5][
-    "City"
-].apply(lambda x: lng_dict[x])
-df.loc[(df["Lat"] <= 36) & (df["Lng"] >= 34), "Lat"] = df.loc[df["Lat"] <= 10][
-    "City"
-].apply(lambda x: lat_dict[x])
+df.loc[(df["Lng"] >= -25) & (df["Lng"] <= -20), "Lng"] = df.loc[
+    (df["Lng"] >= -25) & (df["Lng"] <= -20)
+]["City"].apply(lambda x: lng_dict[x])
+df.loc[(df["Lat"] <= 36) & (df["Lng"] >= 34), "Lat"] = df.loc[
+    (df["Lat"] <= 36) & (df["Lng"] >= 34)
+]["City"].apply(lambda x: lat_dict[x])
+
+
+df.to_pickle("../../data/interim/02_houses_coordsfix.pkl")
