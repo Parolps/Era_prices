@@ -275,3 +275,31 @@ plt.savefig("../../reports/figures/Continent_map_clusters.png", bbox_inches="tig
 #     continent["SellPrice"].max(axis=0) - continent["SellPrice"].min(axis=0)
 # )
 # sizes = X_std * (7 - 3) + 3
+
+plt.plot(df["ListingArea"], df["SellPrice"], "r.")
+plt.plot(np.log(df["ListingArea"]), np.log(df["SellPrice"]), "r.")
+plt.plot(np.log(df["ListingArea"]), np.log(df["NetArea"]), "r.")
+plt.plot(np.log(df["NetArea"]), np.log(df["SellPrice"]), "r.")
+
+pd.DataFrame(
+    {
+        "log_NetArea": np.log(df["NetArea"]),
+        "log_SellPrice": np.log(df["SellPrice"]),
+        "log_ListingArea": np.log(df["ListingArea"]),
+    }
+).corr()
+
+
+def check_skew(df, col):
+    plt.subplot(121)
+    sns.kdeplot(df[col])
+    plt.subplot(122)
+    sns.kdeplot(np.log(df[col]))
+    plt.show()
+
+
+check_skew(df, "NetArea")
+check_skew(df, "SellPrice")
+check_skew(
+    df, "Elevator"
+)  # secalhar é melhor tratar este como categórica assim como Wcs e Rooms
