@@ -6,6 +6,7 @@ from sklearn.metrics.pairwise import rbf_kernel
 from sklearn.decomposition import PCA
 import numpy as np
 import plotly.express as px
+import seaborn as sns
 
 plt.style.use("fivethirtyeight")
 plt.rcParams["figure.figsize"] = (12, 5)
@@ -58,45 +59,6 @@ plt.plot(
 )
 
 
-log_df = pd.DataFrame(
-    {
-        "log_NetArea": np.log(df["NetArea"]),
-        "log_SellPrice": np.log(df["SellPrice"]),
-        "log_ListingArea": np.log(df["ListingArea"]),
-    }
-)
-
-pca = PCA(3)
-
-log_df_pca = pd.DataFrame(
-    pca.fit_transform(log_df), columns=["pca_1", "pca_2", "pca_3"]
-)
-
-
-fig = plt.figure(figsize=(10, 7))
-ax = fig.add_subplot(projection="3d")
-ax.scatter(
-    log_df_pca.iloc[:, 0], log_df_pca.iloc[:, 1], log_df_pca.iloc[:, 2], alpha=0.4
-)
-ax.view_init(0, 40)
-
-
-fig = plt.figure(figsize=(10, 7))
-ax = fig.add_subplot(projection="3d")
-ax.scatter(log_df.iloc[:, 0], log_df.iloc[:, 1], log_df.iloc[:, 2])
-ax.view_init(10, 60)
-
-
-fig = px.scatter_3d(log_df, "log_NetArea", "log_SellPrice", "log_ListingArea")
-fig.show()
-
-
-fig = px.scatter_3d(log_df_pca, "pca_1", "pca_2", "pca_3")
-fig.show()
-
-pca.explained_variance_.sum()
-pca.explained_variance_ratio_[:2].sum()
-
 ## A listing area e net area são colineares mas relacionam-se bem com o sellprice
 ## Construindo as features
 ## - log areas
@@ -108,17 +70,15 @@ to_log = ["NetArea", "ListingArea", "SellPrice"]
 for col in to_log:
     df["log_" + col] = np.log(df[col])
 
+## Rooms by Wcs
+
+(df["Wcs"] / df["Rooms"]).unique()
+
+df["Wcs_per_Room"] = df["Wcs"] / df["Rooms"]
 
 ## secalhar podia pôr umas feats squared
-
-to_square = to_log + ["Parking", "Rooms", "Wcs", "Elevator"]
-
-for col in to_square:
-    df["square_" + col] = df[col] ** 2
-
-df.head()
-
-df.plot(kind="scatter", x="NetArea", y="square_NetArea")
+## Faço antes isto no decorrer do modelo pq me permite controlar a complexidade
+## Faz-se com um pipeline logo
 
 sns.heatmap(df.corr(numeric_only=True))
 

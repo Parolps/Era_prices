@@ -165,5 +165,7 @@ df.loc[(df["Lat"] <= 36) & (df["Lng"] >= 34), "Lat"] = df.loc[
     (df["Lat"] <= 36) & (df["Lng"] >= 34)
 ]["City"].apply(lambda x: lat_dict[x])
 
+df["Lat"] = df["Lat"].astype("float64")
+
 
 df.to_pickle("../../data/interim/02_houses_coordsfix.pkl")
