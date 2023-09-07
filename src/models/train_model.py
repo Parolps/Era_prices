@@ -27,7 +27,9 @@ y_log = df["log_SellPrice"]
 X = df.drop(labels=["SellPrice", "log_SellPrice"], axis=1)
 X_train, X_test, y_train, y_test = train_test_split(X, y_log, test_size=0.2)
 
-# Quick check feature importances
+# Feature Selection
+# - Feature importances
+# -
 # Nota!!! - aqui tratou-se Wcs e Rooms como numeric ao invés de categoria
 
 num_cols = X_train.select_dtypes(np.number).columns.values
@@ -53,13 +55,8 @@ rf_importances = pd.DataFrame(
 rf_importances.sort_values(["Importances"], ascending=False).head(10).plot.barh()
 
 
-# Primeiro test drive com CV
-# Random Forest
-rf_rmses = -cross_val_score(
-    rf, X_train, y_train, cv=5, scoring="neg_root_mean_squared_error"
-)  # 0.41 rmse mas pode ser random luck
+# Feature Selection
 
-GridSearchCV()  #!!!
 
 # Modelos a utilizar
 # -Linear Model
